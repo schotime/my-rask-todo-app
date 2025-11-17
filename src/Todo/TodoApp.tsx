@@ -1,9 +1,9 @@
 import { createState, createView, createMountEffect, createEffect, createRef } from "rask-ui";
-import { withRouter } from "inferno-router";
 import { TodoInput } from "./TodoInput";
 import { TodoFilters } from "./TodoFilters";
 import { TodoList } from "./TodoList";
 import type { Todo, FilterType } from "./types";
+import { getRouterState } from "./routerState";
 
 function Header() {
   return (
@@ -16,17 +16,6 @@ function Header() {
       </p>
     </header>
   );
-}
-
-interface TodoAppProps {
-  match?: {
-    params?: {
-      filter?: string;
-    };
-  };
-  history: {
-    push: (path: string) => void;
-  };
 }
 
 const STORAGE_KEY = "rask-todos";
@@ -68,7 +57,8 @@ const getInitialTodos = (): Todo[] => {
   ];
 };
 
-function TodoAppComponent(props: TodoAppProps) {
+export function TodoApp() {
+  const routerState = getRouterState();
   const todoInputRef = createRef<HTMLInputElement>();
 
   const state = createState<{
@@ -116,8 +106,7 @@ function TodoAppComponent(props: TodoAppProps) {
   };
 
   const changeFilter = (filter: FilterType) => {
-    state.filter = filter;
-    props.history.push(`/todos/${filter}`);
+    routerState.history?.push(`/todos/${filter}`);
   };
 
   const getFilteredTodos = () => {
@@ -184,13 +173,13 @@ function TodoAppComponent(props: TodoAppProps) {
       }
     } else if (e.key === "a" && !isInputFocused) {
       e.preventDefault();
-      props.history.push("/todos/all");
+      routerState.history?.push("/todos/all");
     } else if (e.key === "c" && !isInputFocused) {
       e.preventDefault();
-      props.history.push("/todos/completed");
+      routerState.history?.push("/todos/completed");
     } else if (e.key === "o" && !isInputFocused) {
       e.preventDefault();
-      props.history.push("/todos/active");
+      routerState.history?.push("/todos/active");
     }
   };
 
@@ -210,6 +199,14 @@ function TodoAppComponent(props: TodoAppProps) {
     }
   });
 
+  createEffect(() => {
+    // Sync URL filter param to reactive state
+    const urlFilter = (routerState.match?.params?.filter || "all") as FilterType;
+    if (urlFilter !== state.filter) {
+      state.filter = urlFilter;
+    }
+  });
+
   const view = createView(state, {
     addTodo,
     toggleTodo,
@@ -221,12 +218,6 @@ function TodoAppComponent(props: TodoAppProps) {
   });
 
   return () => {
-    // Sync filter from URL params on every render
-    const urlFilter = (props.match?.params?.filter || "all") as FilterType;
-    if (urlFilter !== state.filter) {
-      state.filter = urlFilter;
-    }
-
     return (
       <div class="w-full max-w-3xl mx-auto">
         <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -286,5 +277,3 @@ function TodoAppComponent(props: TodoAppProps) {
     );
   };
 }
-
-export const TodoApp = withRouter(TodoAppComponent);
