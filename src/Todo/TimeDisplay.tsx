@@ -1,4 +1,4 @@
-import { createState, createMountEffect } from "rask-ui";
+import { useState, useMountEffect } from "rask-ui";
 
 function formatTimeAgo(timestamp: number): string {
   const now = Date.now();
@@ -23,11 +23,11 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 export function TimeDisplay(props: { timestamp: number }) {
-  const state = createState({
+  const state = useState({
     updateTrigger: 0,
   });
 
-  createMountEffect(() => {
+  useMountEffect(() => {
     const interval = setInterval(() => {
       state.updateTrigger += 1;
     }, 30000);

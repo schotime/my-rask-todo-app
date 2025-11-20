@@ -1,30 +1,22 @@
-import { BrowserRouter, Route, Switch } from "inferno-router";
+import { useRouter } from "rask-ui";
 import { TodoApp } from "./Todo/TodoApp";
-import { updateRouterState } from "./Todo/routerState";
+import type { FilterType } from "./Todo/types";
+import { RouterContext, routes } from "./Todo/routes";
+
 
 export function App() {
-  return (
-    <BrowserRouter>
-      <div className="app-container">
-        <div className="card">
-          <Switch>
-            <Route
-              path="/todos/:filter?"
-              render={(routeProps) => {
-                updateRouterState(routeProps);
-                return <TodoApp />;
-              }}
-            />
-            <Route
-              path="/"
-              render={(routeProps) => {
-                updateRouterState(routeProps);
-                return <TodoApp />;
-              }}
-            />
-          </Switch>
-        </div>
+  const router = useRouter(routes);
+
+  RouterContext.inject(router);
+
+  return () => (
+    <div className="app-container">
+      <div className="card">
+
+        {router.route?.name == "home" && <TodoApp />}
+        {router.route?.name == "todos" && <TodoApp filter={router.route.params.filter as FilterType} />}
+
       </div>
-    </BrowserRouter>
+    </div>
   );
 }

@@ -1,9 +1,12 @@
-import { createState, createRef, createEffect, createMountEffect } from "rask-ui";
-import { TimeDisplay } from "./TimeDisplay";
-import type { Todo } from "./types";
+import { useState, useRef, useEffect, useMountEffect } from "rask-ui";
 
 interface TodoItemProps {
-  todo: Todo;
+  todo: {
+    id: string;
+    text: string;
+    completed: boolean;
+    createdAt: number;
+  };
   isSelected: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
@@ -11,15 +14,57 @@ interface TodoItemProps {
   onSelect: (id: string) => void;
 }
 
+function formatTimeAgo(timestamp: number): string {
+  const now = Date.now();
+  const seconds = Math.floor((now - timestamp) / 1000);
+
+  if (seconds < 60) {
+    return seconds <= 0 ? "just now" : `${seconds}s ago`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function TimeDisplay(props: { timestamp: number }) {
+  const state = useState({
+    updateTrigger: 0,
+  });
+
+  useMountEffect(() => {
+    const interval = setInterval(() => {
+      state.updateTrigger += 1;
+    }, 30000);
+
+    return () => clearInterval(interval);
+  });
+
+  return () => (
+    <span class="text-xs text-gray-400 leading-none">
+      {state.updateTrigger >= 0 ? formatTimeAgo(props.timestamp) : ""}
+    </span>
+  );
+}
+
 export function TodoItem(props: TodoItemProps) {
-  const state = createState({
+  const state = useState({
     isEditing: false,
     editText: props.todo.text,
   });
 
-  const inputRef = createRef<HTMLInputElement>();
+  const inputRef = useRef<HTMLInputElement>();
 
-  createEffect(() => {
+  useEffect(() => {
     if (state.isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.setSelectionRange(
@@ -37,7 +82,7 @@ export function TodoItem(props: TodoItemProps) {
     }
   };
 
-  createMountEffect(() => {
+  useMountEffect(() => {
     document.addEventListener("editTodo", handleEditEvent);
     return () => {
       document.removeEventListener("editTodo", handleEditEvent);
@@ -118,7 +163,7 @@ export function TodoItem(props: TodoItemProps) {
             >
               {props.todo.text}
             </span>
-            <TimeDisplay timestamp={props.todo.updatedAt} />
+            <TimeDisplay timestamp={props.todo.createdAt} />
           </div>
           <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button

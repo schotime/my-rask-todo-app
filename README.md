@@ -75,8 +75,8 @@ src/
 ## How It Works
 
 ### State Management
-The app uses RASK UI's `createState` for reactive state:
-- Todos persist to localStorage via `createEffect`
+The app uses RASK UI's `useState` for reactive state:
+- Todos persist to localStorage via `useEffect`
 - Filter state syncs with URL params via `withRouter`
 
 ### Routing
@@ -85,10 +85,10 @@ Routes are defined in `App.tsx`:
 - `/todos/:filter?` - Filter-based routes (all, active, completed)
 
 ### Persistence
-Todos are automatically saved to localStorage using `createEffect` whenever the todos array changes. On app load, saved todos are restored or default todos are shown.
+Todos are automatically saved to localStorage using `useEffect` whenever the todos array changes. On app load, saved todos are restored or default todos are shown.
 
 ### Keyboard Handling
-Global keyboard shortcuts are managed via `createMountEffect` in TodoApp. Shortcuts navigate routes or interact with todos without requiring mouse clicks.
+Global keyboard shortcuts are managed via `useMountEffect` in TodoApp. Shortcuts navigate routes or interact with todos without requiring mouse clicks.
 
 ## Data Format
 

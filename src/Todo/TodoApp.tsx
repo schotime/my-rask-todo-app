@@ -1,73 +1,30 @@
-import { createState, createView, createMountEffect, createEffect, createRef } from "rask-ui";
+import { useState, useView, useMountEffect, useEffect, useRef } from "rask-ui";
 import { TodoInput } from "./TodoInput";
 import { TodoFilters } from "./TodoFilters";
 import { TodoList } from "./TodoList";
 import type { Todo, FilterType } from "./types";
-import { getRouterState } from "./routerState";
+import { Header } from "./Header";
+import { getInitialTodos } from "./data";
+import { RouterContext } from "./routes";
 
-function Header() {
-  return (
-    <header class="mb-8">
-      <h1 class="text-4xl font-bold text-center text-gray-800 mb-2">
-        📝 RASK Todo
-      </h1>
-      <p class="text-center text-gray-500 text-sm">
-        A reactive todo app built with RASK UI
-      </p>
-    </header>
-  );
-}
+export const STORAGE_KEY = "rask-todos";
 
-const STORAGE_KEY = "rask-todos";
+export function TodoApp(props: {
+  filter?: FilterType
+}) {
 
-const getInitialTodos = (): Todo[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Failed to load todos from localStorage:", e);
-  }
+  const router = RouterContext.get();
+  const todoInputRef = useRef<HTMLInputElement>();
 
-  // Default todos if none stored
-  const now = Date.now();
-  return [
-    {
-      id: crypto.randomUUID(),
-      text: "Welcome to RASK Todo App! 🎉",
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      text: "Double-click to edit a todo",
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      text: "Hover over todos to see actions",
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-};
-
-export function TodoApp() {
-  const routerState = getRouterState();
-  const todoInputRef = createRef<HTMLInputElement>();
-
-  const state = createState<{
+  const state = useState<{
     todos: Todo[];
     filter: FilterType;
     selectedId: string | null;
   }>({
     todos: getInitialTodos(),
-    filter: "all",
+    get filter() {
+      return (props.filter || "all") as FilterType;
+    },
     selectedId: null,
   });
 
@@ -106,7 +63,7 @@ export function TodoApp() {
   };
 
   const changeFilter = (filter: FilterType) => {
-    routerState.history?.push(`/todos/${filter}`);
+    router.push("todos", { filter });
   };
 
   const getFilteredTodos = () => {
@@ -173,24 +130,24 @@ export function TodoApp() {
       }
     } else if (e.key === "a" && !isInputFocused) {
       e.preventDefault();
-      routerState.history?.push("/todos/all");
+      router.push("todos", { filter: "all" });
     } else if (e.key === "c" && !isInputFocused) {
       e.preventDefault();
-      routerState.history?.push("/todos/completed");
+      router.push("todos", { filter: "completed" });
     } else if (e.key === "o" && !isInputFocused) {
       e.preventDefault();
-      routerState.history?.push("/todos/active");
+      router.push("todos", { filter: "active" });
     }
   };
 
-  createMountEffect(() => {
+  useMountEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   });
 
-  createEffect(() => {
+  useEffect(() => {
     // Save todos to localStorage whenever state.todos changes
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
@@ -199,15 +156,7 @@ export function TodoApp() {
     }
   });
 
-  createEffect(() => {
-    // Sync URL filter param to reactive state
-    const urlFilter = (routerState.match?.params?.filter || "all") as FilterType;
-    if (urlFilter !== state.filter) {
-      state.filter = urlFilter;
-    }
-  });
-
-  const view = createView(state, {
+  const view = useView(state, {
     addTodo,
     toggleTodo,
     deleteTodo,
@@ -216,6 +165,10 @@ export function TodoApp() {
     getFilteredTodos,
     getStats,
   });
+
+  const onSelect = (id: string) => {
+    state.selectedId = id;
+  }
 
   return () => {
     return (
@@ -239,9 +192,7 @@ export function TodoApp() {
             onToggle={view.toggleTodo}
             onDelete={view.deleteTodo}
             onEdit={view.editTodo}
-            onSelect={(id) => {
-              state.selectedId = id;
-            }}
+            onSelect={onSelect}
           />
 
           {view.getStats().total > 0 && (

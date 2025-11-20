@@ -1,4 +1,4 @@
-import { createState, createRef } from "rask-ui";
+import { useState, useRef } from "rask-ui";
 
 interface TodoInputProps {
   onAdd: (text: string) => void;
@@ -6,11 +6,11 @@ interface TodoInputProps {
 }
 
 export function TodoInput(props: TodoInputProps) {
-  const state = createState({
+  const state = useState({
     inputValue: "",
   });
 
-  const inputRef = props.inputRef || createRef<HTMLInputElement>();
+  const inputRef = props.inputRef || useRef<HTMLInputElement>();
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
