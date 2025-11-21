@@ -1,7 +1,8 @@
-import { STORAGE_KEY } from "./TodoApp";
 import type { Todo } from "./types";
 
-export const getInitialTodos = (): Todo[] => {
+export const STORAGE_KEY = "rask-todos";
+
+export const getTodos = (): Todo[] => {
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -36,4 +37,12 @@ export const getInitialTodos = (): Todo[] => {
             updatedAt: now,
         },
     ];
+};
+
+export const saveTodos = (todos: Todo[]) => {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    } catch (e) {
+        console.error("Failed to save todos to localStorage:", e);
+    }
 };

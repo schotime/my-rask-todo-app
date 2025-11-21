@@ -1,31 +1,29 @@
-import { useState, useView, useMountEffect, useEffect, useRef } from "rask-ui";
+import { useState, useView, useMountEffect, useEffect, useRef, useContext, useDerived } from "rask-ui";
 import { TodoInput } from "./TodoInput";
 import { TodoFilters } from "./TodoFilters";
 import { TodoList } from "./TodoList";
 import type { Todo, FilterType } from "./types";
-import { Header } from "./Header";
-import { getInitialTodos } from "./data";
+import { TodoHeader } from "./TodoHeader";
+import { getTodos, saveTodos } from "./data";
 import { RouterContext } from "./routes";
-
-export const STORAGE_KEY = "rask-todos";
 
 export function TodoApp(props: {
   filter?: FilterType
 }) {
 
-  const router = RouterContext.get();
+  const router = useContext(RouterContext);
   const todoInputRef = useRef<HTMLInputElement>();
 
   const state = useState<{
     todos: Todo[];
-    filter: FilterType;
     selectedId: string | null;
   }>({
-    todos: getInitialTodos(),
-    get filter() {
-      return (props.filter || "all") as FilterType;
-    },
+    todos: getTodos(),
     selectedId: null,
+  });
+
+  const derived = useDerived({
+    filter: () => (props.filter || "all") as FilterType
   });
 
   const addTodo = (text: string) => {
@@ -67,7 +65,7 @@ export function TodoApp(props: {
   };
 
   const getFilteredTodos = () => {
-    switch (state.filter) {
+    switch (derived.filter) {
       case "active":
         return state.todos.filter((t) => !t.completed);
       case "completed":
@@ -149,11 +147,7 @@ export function TodoApp(props: {
 
   useEffect(() => {
     // Save todos to localStorage whenever state.todos changes
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
-    } catch (e) {
-      console.error("Failed to save todos to localStorage:", e);
-    }
+    saveTodos(state.todos);
   });
 
   const view = useView(state, {
@@ -174,12 +168,12 @@ export function TodoApp(props: {
     return (
       <div class="w-full max-w-3xl mx-auto">
         <div class="bg-white rounded-2xl shadow-xl p-8">
-          <Header />
+          <TodoHeader />
 
           <TodoInput onAdd={view.addTodo} inputRef={todoInputRef} />
 
           <TodoFilters
-            currentFilter={view.filter}
+            currentFilter={derived.filter}
             onFilterChange={view.changeFilter}
             activeCount={view.getStats().active}
             completedCount={view.getStats().completed}

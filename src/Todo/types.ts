@@ -6,4 +6,7 @@ export interface Todo {
   updatedAt: number;
 }
 
-export type FilterType = "all" | "active" | "completed";
+export type FilterType =
+  "all" |
+  "active" |
+  "completed";

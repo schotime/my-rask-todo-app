@@ -24,14 +24,12 @@ export function TodoItem(props: TodoItemProps) {
   const inputRef = useRef<HTMLInputElement>();
 
   useEffect(() => {
-    if (state.isEditing) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.setSelectionRange(
-          inputRef.current.value.length,
-          inputRef.current.value.length
-        );
-      }, 0);
+    if (inputRef.current != null) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(
+        inputRef.current.value.length,
+        inputRef.current.value.length
+      );
     }
   });
 
@@ -114,14 +112,12 @@ export function TodoItem(props: TodoItemProps) {
             onChange={() => props.onToggle(props.todo.id)}
             class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
           />
-          <div class="flex-1 flex flex-col gap-0.5">
+          <div class="flex-1 flex flex-col gap-0.5" onDblClick={startEditing}>
             <span
               class={`block text-left text-sm ${props.todo.completed
                 ? "line-through text-gray-400"
                 : "text-gray-800"
-                }`}
-              onDblClick={startEditing}
-            >
+                }`}>
               {props.todo.text}
             </span>
             <TimeDisplay timestamp={props.todo.createdAt} />
