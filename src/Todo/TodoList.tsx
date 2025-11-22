@@ -11,7 +11,7 @@ interface TodoListProps {
 }
 
 export function TodoList(props: TodoListProps) {
-  return () => (
+  return (
     <div>
       {props.todos.length === 0 ? (
         <div class="text-center py-12 text-gray-400">

@@ -6,6 +6,7 @@ import type { Todo, FilterType } from "./types";
 import { TodoHeader } from "./TodoHeader";
 import { getTodos, saveTodos } from "./data";
 import { RouterContext } from "./routes";
+import { TodoSummary } from "./TodoSummary";
 
 export function TodoApp(props: {
   filter?: FilterType
@@ -14,16 +15,32 @@ export function TodoApp(props: {
   const router = useContext(RouterContext);
   const todoInputRef = useRef<HTMLInputElement>();
 
-  const state = useState<{
-    todos: Todo[];
-    selectedId: string | null;
-  }>({
+  const state = useState({
     todos: getTodos(),
-    selectedId: null,
+    selectedId: null as string | null,
   });
 
   const derived = useDerived({
-    filter: () => (props.filter || "all") as FilterType
+    filter: () => (props.filter || "all") as FilterType,
+    stats: () => {
+      const total = state.todos.length;
+      const completed = state.todos.filter((t) => t.completed).length;
+      const active = total - completed;
+      return { total, completed, active };
+    },
+    filteredTodos: () => {
+      switch (derived.filter) {
+        case "active":
+          return state.todos.filter((t) => !t.completed);
+        case "completed":
+          return state.todos.filter((t) => t.completed);
+        default:
+          return state.todos;
+      }
+    },
+    visibleTodoIds: () => {
+      return derived.filteredTodos.map((t) => t.id);
+    }
   });
 
   const addTodo = (text: string) => {
@@ -64,27 +81,8 @@ export function TodoApp(props: {
     router.push("todos", { filter });
   };
 
-  const getFilteredTodos = () => {
-    switch (derived.filter) {
-      case "active":
-        return state.todos.filter((t) => !t.completed);
-      case "completed":
-        return state.todos.filter((t) => t.completed);
-      default:
-        return state.todos;
-    }
-  };
-
-  const getStats = () => {
-    const total = state.todos.length;
-    const completed = state.todos.filter((t) => t.completed).length;
-    const active = total - completed;
-    return { total, completed, active };
-  };
-
-  const getVisibleTodoIds = () => {
-    const filtered = getFilteredTodos();
-    return filtered.map((t) => t.id);
+  const clearCompleted = () => {
+    state.todos = state.todos.filter((t) => !t.completed);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,7 +90,7 @@ export function TodoApp(props: {
     const target = e.target as HTMLElement;
     const isInputFocused = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
-    const visibleIds = getVisibleTodoIds();
+    const visibleIds = derived.visibleTodoIds;
     const currentIndex = state.selectedId ? visibleIds.indexOf(state.selectedId) : -1;
 
     if (e.key === "ArrowDown") {
@@ -150,14 +148,13 @@ export function TodoApp(props: {
     saveTodos(state.todos);
   });
 
-  const view = useView(state, {
+  const view = useView(state, derived, {
     addTodo,
     toggleTodo,
     deleteTodo,
     editTodo,
     changeFilter,
-    getFilteredTodos,
-    getStats,
+    clearCompleted
   });
 
   const onSelect = (id: string) => {
@@ -173,15 +170,15 @@ export function TodoApp(props: {
           <TodoInput onAdd={view.addTodo} inputRef={todoInputRef} />
 
           <TodoFilters
-            currentFilter={derived.filter}
+            currentFilter={view.filter}
             onFilterChange={view.changeFilter}
-            activeCount={view.getStats().active}
-            completedCount={view.getStats().completed}
-            totalCount={view.getStats().total}
+            activeCount={view.stats.active}
+            completedCount={view.stats.completed}
+            totalCount={view.stats.total}
           />
 
           <TodoList
-            todos={view.getFilteredTodos()}
+            todos={view.filteredTodos}
             selectedId={view.selectedId}
             onToggle={view.toggleTodo}
             onDelete={view.deleteTodo}
@@ -189,28 +186,12 @@ export function TodoApp(props: {
             onSelect={onSelect}
           />
 
-          {view.getStats().total > 0 && (
-            <footer class="mt-6 pt-6 border-t border-gray-200">
-              <div class="flex justify-between items-center text-sm text-gray-500">
-                <span>
-                  {view.getStats().active === 0
-                    ? "All tasks completed! 🎉"
-                    : `${view.getStats().active} ${view.getStats().active === 1 ? "task" : "tasks"
-                    } remaining`}
-                </span>
-                {view.getStats().completed > 0 && (
-                  <button
-                    onClick={() => {
-                      state.todos = state.todos.filter((t) => !t.completed);
-                    }}
-                    class="text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    Clear completed
-                  </button>
-                )}
-              </div>
-            </footer>
-          )}
+          <TodoSummary
+            total={view.stats.total}
+            active={view.stats.active}
+            completed={view.stats.completed}
+            onClearCompleted={view.clearCompleted}
+          />
         </div>
 
         <footer class="mt-8 text-center text-sm text-white">
