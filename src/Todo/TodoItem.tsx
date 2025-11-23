@@ -22,6 +22,13 @@ export function TodoItem(props: TodoItemProps) {
   });
 
   const inputRef = useRef<HTMLInputElement>();
+  const itemRef = useRef<HTMLLIElement>();
+
+  useEffect(() => {
+    if (props.isSelected && itemRef.current) {
+      itemRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  });
 
   useEffect(() => {
     if (inputRef.current != null) {
@@ -75,6 +82,7 @@ export function TodoItem(props: TodoItemProps) {
 
   return () => (
     <li
+      ref={itemRef}
       class={`group flex items-center gap-2 p-3 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer ${props.isSelected
         ? "bg-blue-50 border-2 border-blue-500"
         : "bg-white border-2 border-transparent"

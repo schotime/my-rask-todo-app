@@ -2,14 +2,18 @@ import type { Todo } from "./types";
 
 export const STORAGE_KEY = "rask-todos";
 
-export const getTodos = (): Todo[] => {
+export const getTodos = async (): Promise<Todo[]> => {
     try {
+        // Simulate network delay for demonstration
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             return JSON.parse(stored);
         }
     } catch (e) {
         console.error("Failed to load todos from localStorage:", e);
+        throw new Error("Failed to load todos");
     }
 
     // Default todos if none stored
@@ -39,10 +43,13 @@ export const getTodos = (): Todo[] => {
     ];
 };
 
-export const saveTodos = (todos: Todo[]) => {
+export const saveTodos = async (todos: Todo[]): Promise<void> => {
     try {
+        // Simulate network delay for demonstration
+        await new Promise(resolve => setTimeout(resolve, 1000));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
     } catch (e) {
         console.error("Failed to save todos to localStorage:", e);
+        throw new Error("Failed to save todos");
     }
 };

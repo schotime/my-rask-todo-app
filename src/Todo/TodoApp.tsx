@@ -1,12 +1,18 @@
-import { useState, useView, useMountEffect, useEffect, useRef, useContext, useDerived } from "rask-ui";
+import { useState, useView, useMountEffect, useRef, useContext, useDerived, useAsync } from "rask-ui";
 import { TodoInput } from "./TodoInput";
 import { TodoFilters } from "./TodoFilters";
 import { TodoList } from "./TodoList";
-import type { Todo, FilterType } from "./types";
+import type { FilterType, Todo } from "./types";
 import { TodoHeader } from "./TodoHeader";
 import { getTodos, saveTodos } from "./data";
 import { RouterContext } from "./routes";
 import { TodoSummary } from "./TodoSummary";
+
+function useAsyncState<T>(initialValue: T, asyncFunction: () => Promise<T>) {
+  const [state, run] = useAsync<T>(initialValue, asyncFunction);
+  run();
+  return useView(state, { run });
+}
 
 export function TodoApp(props: {
   filter?: FilterType
@@ -16,26 +22,27 @@ export function TodoApp(props: {
   const todoInputRef = useRef<HTMLInputElement>();
 
   const state = useState({
-    todos: getTodos(),
     selectedId: null as string | null,
+    todos: useAsyncState<Todo[]>([], getTodos),
+    isSaving: false,
   });
 
   const derived = useDerived({
     filter: () => (props.filter || "all") as FilterType,
     stats: () => {
-      const total = state.todos.length;
-      const completed = state.todos.filter((t) => t.completed).length;
+      const total = state.todos.value.length;
+      const completed = state.todos.value.filter((t) => t.completed).length;
       const active = total - completed;
       return { total, completed, active };
     },
     filteredTodos: () => {
       switch (derived.filter) {
         case "active":
-          return state.todos.filter((t) => !t.completed);
+          return state.todos.value.filter((t) => !t.completed);
         case "completed":
-          return state.todos.filter((t) => t.completed);
+          return state.todos.value.filter((t) => t.completed);
         default:
-          return state.todos;
+          return state.todos.value;
       }
     },
     visibleTodoIds: () => {
@@ -43,37 +50,51 @@ export function TodoApp(props: {
     }
   });
 
+  const doSave = async () => {
+    state.isSaving = true;
+    try {
+      await saveTodos(state.todos.value)
+    }
+    finally {
+      state.isSaving = false;
+    }
+  };
+
   const addTodo = (text: string) => {
     const now = Date.now();
-    state.todos.push({
+    state.todos.value.push({
       id: crypto.randomUUID(),
       text,
       completed: false,
       createdAt: now,
       updatedAt: now,
     });
+    doSave();
   };
 
   const toggleTodo = (id: string) => {
-    const todo = state.todos.find((t) => t.id === id);
+    const todo = state.todos.value.find((t) => t.id === id);
     if (todo) {
       todo.completed = !todo.completed;
       todo.updatedAt = Date.now();
+      doSave();
     }
   };
 
   const deleteTodo = (id: string) => {
-    const index = state.todos.findIndex((t) => t.id === id);
+    const index = state.todos.value.findIndex((t) => t.id === id);
     if (index !== -1) {
-      state.todos.splice(index, 1);
+      state.todos.value.splice(index, 1);
+      doSave();
     }
   };
 
   const editTodo = (id: string, newText: string) => {
-    const todo = state.todos.find((t) => t.id === id);
+    const todo = state.todos.value.find((t) => t.id === id);
     if (todo) {
       todo.text = newText;
       todo.updatedAt = Date.now();
+      doSave();
     }
   };
 
@@ -82,7 +103,8 @@ export function TodoApp(props: {
   };
 
   const clearCompleted = () => {
-    state.todos = state.todos.filter((t) => !t.completed);
+    state.todos.value = state.todos.value.filter((t) => !t.completed);
+    doSave();
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,7 +132,7 @@ export function TodoApp(props: {
       }
     } else if (e.key === "e" && state.selectedId && !isInputFocused) {
       e.preventDefault();
-      const selectedTodo = state.todos.find((t) => t.id === state.selectedId);
+      const selectedTodo = state.todos.value.find((t) => t.id === state.selectedId);
       if (selectedTodo) {
         // Trigger edit mode by dispatching a custom event
         const event = new CustomEvent("editTodo", { detail: { id: state.selectedId } });
@@ -143,11 +165,6 @@ export function TodoApp(props: {
     };
   });
 
-  useEffect(() => {
-    // Save todos to localStorage whenever state.todos changes
-    saveTodos(state.todos);
-  });
-
   const view = useView(state, derived, {
     addTodo,
     toggleTodo,
@@ -162,9 +179,42 @@ export function TodoApp(props: {
   }
 
   return () => {
+    if (state.todos.isPending && state.todos.value.length === 0) {
+      return (
+        <div class="w-full max-w-3xl mx-auto px-4">
+          <div class="w-full bg-white rounded-2xl shadow-xl p-8 overflow-hidden">
+            <TodoHeader />
+            <div class="py-16 text-center">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <p class="mt-4 text-gray-600">Loading todos...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (state.todos.error) {
+      return (
+        <div class="w-full max-w-3xl mx-auto px-4">
+          <div class="w-full bg-white rounded-2xl shadow-xl p-8 overflow-hidden">
+            <TodoHeader />
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p class="text-red-700 font-semibold">Failed to load todos</p>
+              <p class="text-red-600 text-sm mt-1">{String(state.todos.error)}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div class="w-full max-w-3xl mx-auto">
-        <div class="bg-white rounded-2xl shadow-xl p-8">
+      <div class="flex flex-col h-full">
+        <div class="flex-1 bg-white rounded-2xl shadow-xl p-8 overflow-hidden relative flex flex-col">
+          {state.isSaving && (
+            <div class="absolute top-4 right-4">
+              <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500"></div>
+            </div>
+          )}
           <TodoHeader />
 
           <TodoInput onAdd={view.addTodo} inputRef={todoInputRef} />
@@ -177,14 +227,16 @@ export function TodoApp(props: {
             totalCount={view.stats.total}
           />
 
-          <TodoList
-            todos={view.filteredTodos}
-            selectedId={view.selectedId}
-            onToggle={view.toggleTodo}
-            onDelete={view.deleteTodo}
-            onEdit={view.editTodo}
-            onSelect={onSelect}
-          />
+          <div class="flex-1 overflow-y-auto">
+            <TodoList
+              todos={view.filteredTodos}
+              selectedId={view.selectedId}
+              onToggle={view.toggleTodo}
+              onDelete={view.deleteTodo}
+              onEdit={view.editTodo}
+              onSelect={onSelect}
+            />
+          </div>
 
           <TodoSummary
             total={view.stats.total}
@@ -194,8 +246,8 @@ export function TodoApp(props: {
           />
         </div>
 
-        <footer class="mt-8 text-center text-sm text-white">
-          <p>
+        <footer class="text-center text-sm text-white mt-4">
+          <p onDblClick={() => state.todos.run()}>
             N for new • ↑↓ to select • Space to check • E to edit • A for all • C for completed • O for active
           </p>
         </footer>
