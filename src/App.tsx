@@ -1,4 +1,4 @@
-import { useRouter, useInjectContext } from "rask-ui";
+import { useRouter, useInjectContext, useEffect } from "rask-ui";
 import { TodoApp } from "./Todo/TodoApp";
 import type { FilterType } from "./Todo/types";
 import { RouterContext, routes } from "./Todo/routes";
@@ -12,9 +12,16 @@ export function App() {
   return () => (
     <div className="app-container">
       <div className="card">
-        {router.route?.name == "home" && <TodoApp />}
-        {router.route?.name == "todos" && <TodoApp filter={router.route.params.filter as FilterType} />}
+        {renderRoutes()}
       </div>
     </div>
   );
+
+  function renderRoutes() {
+    if (router.route?.name == "todos") {
+      const filter = router.route.params.filter as FilterType;
+      return <TodoApp filter={filter} />;
+    }
+    return <TodoApp />;
+  }
 }

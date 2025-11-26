@@ -8,22 +8,20 @@ import { getTodos, saveTodos } from "./data";
 import { RouterContext } from "./routes";
 import { TodoSummary } from "./TodoSummary";
 
-function useAsyncState<T>(initialValue: T, asyncFunction: () => Promise<T>) {
-  const [state, run] = useAsync<T>(initialValue, asyncFunction);
-  run();
-  return useView(state, { run });
+function useAsyncState<T>(cb: any, defaultValue: T) {
+  const [asyncState, refresh] = useAsync(cb)
+  return useView(asyncState, { get value() { return asyncState.value as T || defaultValue }, set value(v) { asyncState.value = v } }, { refresh });
 }
 
 export function TodoApp(props: {
   filter?: FilterType
 }) {
-
   const router = useContext(RouterContext);
   const todoInputRef = useRef<HTMLInputElement>();
 
   const state = useState({
     selectedId: null as string | null,
-    todos: useAsyncState<Todo[]>([], getTodos),
+    todos: useAsyncState<Todo[]>(getTodos, []),
     isSaving: false,
   });
 
@@ -179,7 +177,7 @@ export function TodoApp(props: {
   }
 
   return () => {
-    if (state.todos.isPending && state.todos.value.length === 0) {
+    if (state.todos.isLoading && state.todos.value.length === 0) {
       return (
         <div class="w-full max-w-3xl mx-auto px-4">
           <div class="w-full bg-white rounded-2xl shadow-xl p-8 overflow-hidden">
@@ -210,7 +208,7 @@ export function TodoApp(props: {
     return (
       <div class="flex flex-col h-full">
         <div class="flex-1 bg-white rounded-2xl shadow-xl p-8 overflow-hidden relative flex flex-col">
-          {state.isSaving && (
+          {state.isSaving || state.todos.isRefreshing && (
             <div class="absolute top-4 right-4">
               <div class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500"></div>
             </div>
@@ -247,7 +245,7 @@ export function TodoApp(props: {
         </div>
 
         <footer class="text-center text-sm text-white mt-4">
-          <p onDblClick={() => state.todos.run()}>
+          <p onDblClick={() => state.todos.refresh()}>
             N for new • ↑↓ to select • Space to check • E to edit • A for all • C for completed • O for active
           </p>
         </footer>
