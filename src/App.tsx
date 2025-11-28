@@ -1,13 +1,9 @@
-import { useRouter, useInjectContext, useEffect } from "rask-ui";
 import { TodoApp } from "./Todo/TodoApp";
 import type { FilterType } from "./Todo/types";
-import { RouterContext, routes } from "./Todo/routes";
+import { RouterContext } from "./Todo/routes";
 
 export function App() {
-  const router = useRouter(routes);
-  const inject = useInjectContext(RouterContext);
-
-  inject(router);
+  const router = RouterContext.inject();
 
   return () => (
     <div className="app-container">

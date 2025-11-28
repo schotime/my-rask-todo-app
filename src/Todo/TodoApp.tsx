@@ -1,4 +1,4 @@
-import { useState, useView, useMountEffect, useRef, useContext, useDerived, useAsync } from "rask-ui";
+import { useState, useView, useMountEffect, useRef, useDerived, useAsync } from "rask-ui";
 import { TodoInput } from "./TodoInput";
 import { TodoFilters } from "./TodoFilters";
 import { TodoList } from "./TodoList";
@@ -16,7 +16,7 @@ function useAsyncState<T>(cb: any, defaultValue: T) {
 export function TodoApp(props: {
   filter?: FilterType
 }) {
-  const router = useContext(RouterContext);
+  const router = RouterContext.use();
   const todoInputRef = useRef<HTMLInputElement>();
 
   const state = useState({
