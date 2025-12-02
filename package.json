@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "rask-ui": "^0.24.1"
+    "rask-ui": "^0.25.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.17",

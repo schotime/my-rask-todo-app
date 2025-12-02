@@ -146,13 +146,13 @@ export function TodoApp(props: {
       }
     } else if (e.key === "a" && !isInputFocused) {
       e.preventDefault();
-      router.push("todos", { filter: "all" });
+      changeFilter("all");
     } else if (e.key === "c" && !isInputFocused) {
       e.preventDefault();
-      router.push("todos", { filter: "completed" });
+      changeFilter("completed");
     } else if (e.key === "o" && !isInputFocused) {
       e.preventDefault();
-      router.push("todos", { filter: "active" });
+      changeFilter("active");
     }
   };
 
